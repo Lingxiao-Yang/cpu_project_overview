@@ -5,8 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>3-Way Superscalar OoO RISC-V Processor</title>
 <style>
-:root{--bg:#fafaf8;--fg:#1c1c1a;--mute:#6a6a64;--card:#fff;--line:#deded8;--acc:#1f6feb;--acc2:#0f9d82;--warn:#c2410c;--fe:#e6dcef;--be:#fdf0c8;--mem:#f8d4d1;--fu:#d6e4f8}
-@media (prefers-color-scheme:dark){:root{--bg:#141413;--fg:#ececE8;--mute:#9a9a92;--card:#1d1d1b;--line:#33332f;--acc:#6aa5ff;--acc2:#3ccfb0;--warn:#fb923c;--fe:#3a3046;--be:#40391f;--mem:#47292a;--fu:#223349}}
+:root{color-scheme:light;--bg:#fafaf8;--fg:#1c1c1a;--mute:#6a6a64;--card:#fff;--line:#deded8;--acc:#1f6feb;--acc2:#0f9d82;--warn:#c2410c;--fe:#e6dcef;--be:#fdf0c8;--mem:#f8d4d1;--fu:#d6e4f8;--stroke:#555;--wire:#8a8a84}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;--bg:#141413;--fg:#ececE8;--mute:#9a9a92;--card:#1d1d1b;--line:#33332f;--acc:#6aa5ff;--acc2:#3ccfb0;--warn:#fb923c;--fe:#3a3046;--be:#40391f;--mem:#47292a;--fu:#223349;--stroke:#8a8a84;--wire:#7a7a74}}
+:root[data-theme=dark]{color-scheme:dark;--bg:#141413;--fg:#ececE8;--mute:#9a9a92;--card:#1d1d1b;--line:#33332f;--acc:#6aa5ff;--acc2:#3ccfb0;--warn:#fb923c;--fe:#3a3046;--be:#40391f;--mem:#47292a;--fu:#223349;--stroke:#8a8a84;--wire:#7a7a74}
+body{transition:background-color .2s,color .2s}
+.theme-btn{position:fixed;top:12px;right:12px;z-index:10;background:var(--card);border:1px solid var(--line);border-radius:999px;width:40px;height:40px;cursor:pointer;font-size:18px;line-height:1;display:grid;place-items:center}
+.theme-btn:hover{border-color:var(--acc)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding-inline:20px}
 main{max-width:1000px;margin:0 auto;padding-block:40px 80px}
@@ -20,9 +24,9 @@ p{margin:8px 0}.sub{color:var(--mute)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
 .row{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px}
 @media(max-width:760px){.row{grid-template-columns:1fr}}
-svg text{font:12px system-ui,sans-serif;fill:#1c1c1a;pointer-events:none}
-.blk{cursor:pointer;stroke:#555;stroke-width:1.2}.blk:hover,.blk.sel{stroke:var(--acc);stroke-width:3}
-.wire{fill:none;stroke:#8a8a84;stroke-width:1.5;marker-end:url(#ar)}
+svg text{font:12px system-ui,sans-serif;fill:var(--fg);pointer-events:none}
+.blk{cursor:pointer;stroke:var(--stroke);stroke-width:1.2}.blk:hover,.blk.sel{stroke:var(--acc);stroke-width:3}
+.wire{fill:none;stroke:var(--wire);stroke-width:1.5;marker-end:url(#ar)}
 .det h3{margin-top:0}.det ul{padding-left:18px;margin:8px 0}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}
 button,select,input{font:inherit;color:var(--fg)}
@@ -45,8 +49,10 @@ th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
 .scroll{overflow-x:auto}
 .note{font-size:.85rem;color:var(--mute);border-left:3px solid var(--line);padding-left:12px;margin-top:40px}
 </style>
+<script>try{const t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
 <body>
+<button class="theme-btn" id="themeBtn" type="button"></button>
 <main>
 <h1>Three-Way Superscalar Out-of-Order RISC-V Processor</h1>
 <p class="sub">P6-style microarchitecture &middot; SystemVerilog &middot; University of Michigan EECS 470, Fall 2025 &middot; Team 12 "OoOps" (Lingxiao Yang, Rui Jiang, Runshuang Guo, Juntao Wu) &middot; <a href="EECS470_Final_Report.pdf">Final report (PDF)</a></p>
@@ -64,13 +70,13 @@ th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
 <div class="row">
 <div class="card">
 <svg viewBox="0 0 640 430" width="100%" role="img" aria-label="CPU block diagram">
-<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#8a8a84"/></marker></defs>
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--wire)"/></marker></defs>
 <path class="wire" d="M110 50H150"/><path class="wire" d="M250 50H290"/><path class="wire" d="M390 50H430"/>
 <path class="wire" d="M480 80V120"/><path class="wire" d="M430 150H390"/><path class="wire" d="M340 180V215"/>
 <path class="wire" d="M290 240H250"/><path class="wire" d="M340 270V310"/><path class="wire" d="M340 350V385"/>
 <path class="wire" d="M135 240V190H290"/><path class="wire" d="M190 215V190"/>
 <g id="blocks"></g>
-<text x="20" y="418" style="fill:#6a6a64">Purple: front end &nbsp; Yellow: rename/schedule/retire &nbsp; Blue: execute &nbsp; Red: memory</text>
+<text x="20" y="418" style="fill:var(--mute)">Purple: front end &nbsp; Yellow: rename/schedule/retire &nbsp; Blue: execute &nbsp; Red: memory</text>
 </svg>
 </div>
 <div class="card det" id="detail" aria-live="polite"></div>
@@ -141,6 +147,15 @@ th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
 </main>
 
 <script>
+// Theme toggle: explicit choice overrides the OS preference and is remembered
+const themeBtn=document.getElementById('themeBtn'),darkMq=matchMedia('(prefers-color-scheme: dark)');
+const isDark=()=>{const t=document.documentElement.dataset.theme;return t?t==='dark':darkMq.matches};
+function syncThemeBtn(){const d=isDark();themeBtn.textContent=d?'☀️':'\u{1F319}';
+ themeBtn.setAttribute('aria-label',d?'Switch to light mode':'Switch to dark mode');themeBtn.title=themeBtn.getAttribute('aria-label')}
+themeBtn.onclick=()=>{const t=isDark()?'light':'dark';document.documentElement.dataset.theme=t;
+ try{localStorage.setItem('theme',t)}catch(e){}syncThemeBtn()};
+darkMq.addEventListener('change',syncThemeBtn);syncThemeBtn();
+
 const BLOCKS=[
 {id:'pc',n:'PC / Fetch',x:20,y:25,w:90,h:50,c:'fe',t:'Fetch stage',l:['Drives the PC into the I-cache and gathers up to three instructions per cycle (PC, PC+4, PC+8) from two aligned 64-bit lines.','Consults all predictors in parallel and pushes packets into the instruction fetch buffer.','Stalls on cache misses until both lines arrive and the buffer has room.','On a redirect from commit, the PC is overwritten with the branch target and speculative instructions are replaced.']},
 {id:'ic',n:'I-Cache',x:150,y:25,w:100,h:50,c:'fe',t:'Instruction cache + prefetcher',l:['Direct-mapped, 32 lines of 8 B, split into even/odd banks so PC and PC+8 arrive together.','Predecode bits (return, conditional branch) are stored beside the data.','4-entry victim cache with 2-bit LRU absorbs conflict misses.','Four outstanding transactions: two demand, two sequential prefetch streams (PC+16, PC+24).']},
