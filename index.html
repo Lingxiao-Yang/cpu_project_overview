@@ -50,7 +50,7 @@ th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
 <main>
 <h1>Three-Way Superscalar Out-of-Order RISC-V Processor</h1>
 <p class="sub">P6-style microarchitecture &middot; SystemVerilog &middot; University of Michigan EECS 470, Fall 2025 &middot; Team 12 "OoOps" (Lingxiao Yang, Rui Jiang, Runshuang Guo, Juntao Wu) &middot; <a href="EECS470_Final_Report.pdf">Final report (PDF)</a></p>
-<p>A 3-wide out-of-order core with register renaming, reservation-station scheduling, a reorder buffer, a speculative load/store queue, a hybrid branch predictor, an instruction prefetcher, and separate instruction and non-blocking data caches.</p>
+<p>A three-wide out-of-order core featuring register renaming, reservation-station scheduling, a reorder buffer, a speculative load/store queue, a hybrid branch predictor, instruction prefetching, and separate instruction and non-blocking data caches.</p>
 
 <div class="stats">
 <div class="stat"><b>8.3 ns</b><span>post-synthesis clock period (was 11 ns)</span></div>
@@ -60,7 +60,7 @@ th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
 </div>
 
 <h2>1. Microarchitecture explorer</h2>
-<p class="sub">Click a block to see how it works.</p>
+<p class="sub">Select a block to see how it works.</p>
 <div class="row">
 <div class="card">
 <svg viewBox="0 0 640 430" width="100%" role="img" aria-label="CPU block diagram">
@@ -78,7 +78,7 @@ th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
 <div class="figs"><figure><img src="assets/overview.png" alt="Full CPU architecture figure from the report" loading="lazy"><figcaption>Full datapath from the final report (fetch, dispatch, issue, complete, execute flows).</figcaption></figure></div>
 
 <h2>2. Branch predictor playground</h2>
-<p>The real predictor is a hybrid of a bimodal table and a GShare table with a two-bit chooser (64 entries each). Pick a branch behavior and history length to compare them on a synthetic stream. This is an illustrative model, not the benchmark data.</p>
+<p>The real predictor is a hybrid of a bimodal table and a GShare table with a two-bit chooser (64 entries each). Choose a branch behavior and history length to compare the three schemes on a synthetic stream. This is an illustrative model, not benchmark data.</p>
 <div class="card">
 <div class="ctl">
 <label>Workload <select id="bpWl">
@@ -108,7 +108,7 @@ th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
 </div>
 <h3>CPI improvement from prefetching (no-prefetch minus prefetch)</h3>
 <div class="card"><div class="bars" id="pfBars"></div></div>
-<p class="sub">Only sort_search regresses, because the prefetcher pulls in unused lines that evict useful ones.</p>
+<p class="sub">Only sort_search regresses: the prefetcher brings in unused lines that evict useful ones.</p>
 
 <h2>4. Results</h2>
 <h3>CPI per benchmark</h3>
@@ -121,21 +121,21 @@ th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
 
 <h3>LSQ forwarding rate</h3>
 <div class="card"><div class="bars" id="lsqBars"></div></div>
-<p class="sub">Forwarding noticeably lowers CPI. Speculative load issue helps less, since loads that jump the line are more likely to miss. D-cache hit rate is the dominant CPI factor, and forwarding hides some misses.</p>
+<p class="sub">Forwarding noticeably lowers CPI, while speculative load issue helps less because loads that issue early are more likely to miss. D-cache hit rate is the dominant factor in CPI, and forwarding hides some of the misses.</p>
 
 <h2>5. Engineering notes</h2>
 <div class="scroll"><table>
 <tr><th>Topic</th><th>What we did</th></tr>
 <tr><td>Timing</td><td>Refactored the CDB-to-RS wakeup, LSQ-to-D-cache, and ROB dispatch paths. Critical path went from 11 ns to 8.3 ns.</td></tr>
-<tr><td>Modularity</td><td>ROB, LSQ, and D-cache are built from per-entry or per-thread state machines. This made bugs local and critical paths easy to find.</td></tr>
+<tr><td>Modularity</td><td>ROB, LSQ, and D-cache are built from per-entry or per-thread state machines. This keeps bugs local and makes critical paths easy to find.</td></tr>
 <tr><td>Typed packets</td><td>Packed structs carry data between stages (instruction, ROB, map-table, RS, and FU packets), so interface changes are one edit.</td></tr>
-<tr><td>D-cache threads</td><td>Concurrency is a parameter. Three threads gave the best CPI. The arbiter favors one thread and the LSQ often has only one outstanding load, so extra threads sit idle.</td></tr>
+<tr><td>D-cache threads</td><td>Concurrency is a parameter. Three threads gave the best CPI. The arbiter favors one thread and the LSQ often has only one outstanding load, so additional threads are underused.</td></tr>
 <tr><td>Verification</td><td>Module testbenches, benchmark sweeps, post-synthesis timing analysis, and a Python GUI that steps through packets cycle by cycle.</td></tr>
 </table></div>
 <div class="figs"><figure><img src="assets/visual_debugger.png" alt="GUI packet debugger screenshot" loading="lazy"><figcaption>Cycle-by-cycle packet debugger with RS state window.</figcaption></figure></div>
 
 <h2>6. Future work</h2>
-<p>Deeper and more adaptive branch predictors, early branch recovery, better cache replacement, and tighter LSQ and D-cache coordination for more memory-level parallelism.</p>
+<p>Promising directions include deeper, more adaptive branch predictors, early branch recovery, improved cache replacement policies, and tighter LSQ and D-cache coordination to increase memory-level parallelism.</p>
 
 <p class="note">This demo describes the design and results without publishing course implementation source. Confirm with EECS 470 staff and teammates before making any code, screenshots, or detailed assignment materials public.</p>
 </main>
@@ -148,10 +148,10 @@ const BLOCKS=[
 {id:'bp',n:'Predictor + BTB + RAS',x:430,y:25,w:150,h:55,c:'fe',t:'Branch prediction',l:['Hybrid of 64-entry bimodal and 64-entry GShare (6-bit history), arbitrated by a chooser. Hit rate 87.2% versus 84.3% bimodal-only.','64-entry direct-mapped BTB redirects fetch on predicted-taken branches.','16-entry return-address stack mirrors the 3-wide window. Recovery copies the committed stack over the speculative one.']},
 {id:'mt',n:'Map Table',x:430,y:120,w:150,h:60,c:'be',t:'Map table and rename',l:['Tracks whether each architectural register is renamed, which ROB tag will produce it, and whether that value was broadcast.','Each cycle: apply CDB, then retirements, then allocations. The youngest lane wins on same-cycle writes.','Younger lanes see tags from older siblings in the same cycle. x0 is never renamed.']},
 {id:'rob',n:'ROB',x:290,y:120,w:100,h:60,c:'be',t:'Reorder buffer',l:['Per-entry state machines driven by CDB and control inputs, with the dispatch logic separated from the entries.','Branch misprediction is detected inside each entry, which made debugging and critical-path work simple.','Retires in order and sends redirects and map-table updates. Size 32 is the sweet spot (WCPI 2.129).']},
-{id:'rs',n:'Reservation Station',x:290,y:215,w:100,h:55,c:'be',t:'Reservation station',l:['Holds renamed instructions until operands are ready: busy, opclass, ROB tag, two source operands with tag/ready/value.','CDB wakeup each cycle, and CDB snooping at dispatch to avoid an extra wake cycle.','Per-class selectors, then a global 3-wide arbiter across FU lanes. Issue registers shorten the wakeup-to-execute path.','Early-tag broadcast is wired but disabled.']},
+{id:'rs',n:'Reservation Station',x:290,y:215,w:100,h:55,c:'be',t:'Reservation station',l:['Holds renamed instructions until operands are ready: busy, opclass, ROB tag, two source operands with tag/ready/value.','CDB wakeup each cycle, and CDB snooping at dispatch to avoid an extra wake cycle.','Per-class selectors, then a global 3-wide arbiter across FU lanes. Issue registers shorten the wakeup-to-execute path.','Early-tag broadcast is wired in but disabled.']},
 {id:'fu',n:'ALU / MUL / BR',x:150,y:215,w:100,h:55,c:'fu',t:'Functional units',l:['ALU lanes are combinational behind one-entry result buffers. The valid bit doubles as busy and CDB request.','Pipelined multiplier (mult_stage chain) accepts one multiply per cycle and freezes on CDB stall.','Branch lane: condition checker plus target adder, buffering taken bit, target and fall-through PC.','Extra branch or multiplier units gave no measurable gain (WCPI 2.131 vs 2.129, 2.128 vs 2.129).']},
 {id:'cdb',n:'CDB',x:20,y:215,w:100,h:55,c:'fu',t:'Common data bus',l:['Broadcasts up to CDB_SZ results per cycle to map table, ROB, RS and register file.','Request vectors are rotated by a round-robin pointer before the parallel selector, then un-rotated for fairness.','fu_stall tells losing FUs to hold their buffered result.']},
-{id:'lsq',n:'LSQ',x:290,y:310,w:100,h:40,c:'mem',t:'Load/store queue',l:['Each load and store entry is a state machine: IDLE, WAIT_ADDR, WAIT_DATA, PENDING, COMMIT.','Store addresses are sent to the load queue at issue, so age checks are distributed across load entries using ROB index order.','Forwards from older stores when all bytes are covered; otherwise speculatively issues past unresolved store addresses.','Over 800 lines but stays readable thanks to the per-entry structure.']},
+{id:'lsq',n:'LSQ',x:290,y:310,w:100,h:40,c:'mem',t:'Load/store queue',l:['Each load and store entry is a state machine: IDLE, WAIT_ADDR, WAIT_DATA, PENDING, COMMIT.','Store addresses are sent to the load queue at issue, so age checks are distributed across load entries using ROB index order.','Forwards from older stores when all bytes are covered; otherwise speculatively issues past unresolved store addresses.','At over 800 lines it remains readable because of the per-entry structure.']},
 {id:'dc',n:'D-Cache',x:290,y:385,w:100,h:40,c:'mem',t:'Non-blocking data cache',l:['Write-back, direct-mapped, fully non-blocking, with a victim cache.','Instead of an MSHR file it uses N_THREAD parallel state-machine "threads", each handling one request. An arbiter spreads requests over free threads.','N_THREAD = 3 gave the best CPI. Hit rate drops as threads rise because out-of-order accesses hurt locality.']}
 ];
 const g=document.getElementById('blocks'),det=document.getElementById('detail'),NS='http://www.w3.org/2000/svg';
