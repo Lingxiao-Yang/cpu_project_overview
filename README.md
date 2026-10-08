@@ -2,7 +2,7 @@
 
 **P6-style microarchitecture · SystemVerilog · University of Michigan EECS 470 (Fall 2025) · Team 12, "OoOps"**
 
-[Interactive demo](./index.html) · [Final report (PDF)](./EECS470_Final_Report.pdf) · Private course repository (source not published)
+[Interactive demo](https://lingxiao-yang.github.io/cpu_project_overview/) · [Final report (PDF)](./EECS470_Final_Report.pdf) · Private course repository (source not published)
 
 A three-wide, P6-style out-of-order RISC-V core featuring register renaming, reservation-station scheduling, a reorder buffer, a speculative load/store queue (LSQ), a hybrid branch predictor, instruction prefetching, and separate instruction and non-blocking data caches. The final design passes all correctness tests in the benchmark suite.
 
