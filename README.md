@@ -6,9 +6,6 @@
 
 A three-wide, P6-style out-of-order RISC-V core featuring register renaming, reservation-station scheduling, a reorder buffer, a speculative load/store queue (LSQ), a hybrid branch predictor, instruction prefetching, and separate instruction and non-blocking data caches. The final design passes all correctness tests in the benchmark suite.
 
-## Viewing the demo
-
-Open `index.html` in any modern browser; it is self-contained and needs no server or build step. To serve it locally, run `python -m http.server` in this folder and visit `http://localhost:8000`. The page can also be hosted with GitHub Pages.
 
 ## At a glance
 
