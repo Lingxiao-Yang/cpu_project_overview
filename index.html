@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3-Way Superscalar OoO RISC-V Processor</title>
+<style>
+:root{--bg:#fafaf8;--fg:#1c1c1a;--mute:#6a6a64;--card:#fff;--line:#deded8;--acc:#1f6feb;--acc2:#0f9d82;--warn:#c2410c;--fe:#e6dcef;--be:#fdf0c8;--mem:#f8d4d1;--fu:#d6e4f8}
+@media (prefers-color-scheme:dark){:root{--bg:#141413;--fg:#ececE8;--mute:#9a9a92;--card:#1d1d1b;--line:#33332f;--acc:#6aa5ff;--acc2:#3ccfb0;--warn:#fb923c;--fe:#3a3046;--be:#40391f;--mem:#47292a;--fu:#223349}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding-inline:20px}
+main{max-width:1000px;margin:0 auto;padding-block:40px 80px}
+h1{font-size:2rem;line-height:1.2;margin:0 0 6px}
+h2{font-size:1.35rem;margin:56px 0 10px;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:1.05rem;margin:22px 0 6px}
+p{margin:8px 0}.sub{color:var(--mute)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:24px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.stat b{display:block;font-size:1.8rem;line-height:1.1}.stat span{color:var(--mute);font-size:.88rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+.row{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px}
+@media(max-width:760px){.row{grid-template-columns:1fr}}
+svg text{font:12px system-ui,sans-serif;fill:#1c1c1a;pointer-events:none}
+.blk{cursor:pointer;stroke:#555;stroke-width:1.2}.blk:hover,.blk.sel{stroke:var(--acc);stroke-width:3}
+.wire{fill:none;stroke:#8a8a84;stroke-width:1.5;marker-end:url(#ar)}
+.det h3{margin-top:0}.det ul{padding-left:18px;margin:8px 0}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}
+button,select,input{font:inherit;color:var(--fg)}
+.tab{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 14px;cursor:pointer}
+.tab[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:#fff}
+.bars{display:grid;gap:5px}
+.bar{display:grid;grid-template-columns:120px 1fr 56px;align-items:center;gap:8px;font-size:.9rem}
+.bar i{display:block;height:16px;border-radius:3px;background:var(--acc);min-width:2px}
+.bar em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums}
+.bar.alt i{background:var(--acc2)}.bar.neg i{background:var(--warn)}
+.bar span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctl{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.ctl label{display:flex;gap:8px;align-items:center}
+select{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+img{max-width:100%;height:auto;border-radius:8px;border:1px solid var(--line);background:#fff}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:12px}
+figure{margin:0}figcaption{font-size:.85rem;color:var(--mute);margin-top:4px}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
+.scroll{overflow-x:auto}
+.note{font-size:.85rem;color:var(--mute);border-left:3px solid var(--line);padding-left:12px;margin-top:40px}
+</style>
+</head>
+<body>
+<main>
+<h1>Three-Way Superscalar Out-of-Order RISC-V Processor</h1>
+<p class="sub">P6-style microarchitecture &middot; SystemVerilog &middot; University of Michigan EECS 470, Fall 2025 &middot; Team 12 "OoOps" (Lingxiao Yang, Rui Jiang, Runshuang Guo, Juntao Wu) &middot; <a href="EECS470_Final_Report.pdf">Final report (PDF)</a></p>
+<p>A 3-wide out-of-order core with register renaming, reservation-station scheduling, a reorder buffer, a speculative load/store queue, a hybrid branch predictor, an instruction prefetcher, and separate instruction and non-blocking data caches.</p>
+
+<div class="stats">
+<div class="stat"><b>8.3 ns</b><span>post-synthesis clock period (was 11 ns)</span></div>
+<div class="stat"><b>2.129</b><span>weighted-average CPI</span></div>
+<div class="stat"><b>87.2%</b><span>hybrid branch-predictor hit rate</span></div>
+<div class="stat"><b>3-wide</b><span>fetch, dispatch, issue</span></div>
+</div>
+
+<h2>1. Microarchitecture explorer</h2>
+<p class="sub">Click a block to see how it works.</p>
+<div class="row">
+<div class="card">
+<svg viewBox="0 0 640 430" width="100%" role="img" aria-label="CPU block diagram">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#8a8a84"/></marker></defs>
+<path class="wire" d="M110 50H150"/><path class="wire" d="M250 50H290"/><path class="wire" d="M390 50H430"/>
+<path class="wire" d="M480 80V120"/><path class="wire" d="M430 150H390"/><path class="wire" d="M340 180V215"/>
+<path class="wire" d="M290 240H250"/><path class="wire" d="M340 270V310"/><path class="wire" d="M340 350V385"/>
+<path class="wire" d="M135 240V190H290"/><path class="wire" d="M190 215V190"/>
+<g id="blocks"></g>
+<text x="20" y="418" style="fill:#6a6a64">Purple: front end &nbsp; Yellow: rename/schedule/retire &nbsp; Blue: execute &nbsp; Red: memory</text>
+</svg>
+</div>
+<div class="card det" id="detail" aria-live="polite"></div>
+</div>
+<div class="figs"><figure><img src="assets/overview.png" alt="Full CPU architecture figure from the report" loading="lazy"><figcaption>Full datapath from the final report (fetch, dispatch, issue, complete, execute flows).</figcaption></figure></div>
+
+<h2>2. Branch predictor playground</h2>
+<p>The real predictor is a hybrid of a bimodal table and a GShare table with a two-bit chooser (64 entries each). Pick a branch behavior and history length to compare them on a synthetic stream. This is an illustrative model, not the benchmark data.</p>
+<div class="card">
+<div class="ctl">
+<label>Workload <select id="bpWl">
+<option value="loop">Loop (taken 4, not-taken 1)</option>
+<option value="alt">Repeating T,T,N pattern</option>
+<option value="bias">Strongly biased</option>
+<option value="corr">History-correlated pair</option>
+<option value="mix" selected>Mixed program</option>
+<option value="rand">Random 50/50</option></select></label>
+<label>GShare history bits <select id="bpH"><option>4</option><option selected>6</option><option>8</option></select></label>
+</div>
+<div class="bars" id="bpBars"></div>
+<p class="sub" id="bpNote" style="font-size:.88rem"></p>
+</div>
+<h3>Measured on the benchmark suite (6-bit history)</h3>
+<div class="card"><div class="bars" id="bpReal"></div></div>
+<div class="figs">
+<figure><img src="assets/bp.png" alt="Hybrid predictor diagram" loading="lazy"><figcaption>Hybrid predictor: the chooser trusts bimodal when GShare is wrong and bimodal is right, and vice versa.</figcaption></figure>
+<figure><img src="assets/bp_history_hit_rates.png" alt="GShare hit rate vs history length per benchmark" loading="lazy"><figcaption>GShare hit rate versus history length (4, 6, 8) per benchmark.</figcaption></figure>
+</div>
+
+<h2>3. Instruction prefetching</h2>
+<p>The I-cache delivers PC and PC+8 each cycle. After a miss, the controller launches sequential prefetches at PC+16 and PC+24, and keeps going while each prior prefetch succeeds. It cancels the stream if the base PC changes or the next block is already cached. Demand requests always win arbitration.</p>
+<div class="figs">
+<figure><img src="assets/prefetch.png" alt="Prefetch logic illustration" loading="lazy"><figcaption>Regular fetch, prefetch, and continued prefetching.</figcaption></figure>
+<figure><img src="assets/prefetch_comparison.png" alt="CPI with and without prefetching" loading="lazy"><figcaption>CPI with and without the prefetcher.</figcaption></figure>
+</div>
+<h3>CPI improvement from prefetching (no-prefetch minus prefetch)</h3>
+<div class="card"><div class="bars" id="pfBars"></div></div>
+<p class="sub">Only sort_search regresses, because the prefetcher pulls in unused lines that evict useful ones.</p>
+
+<h2>4. Results</h2>
+<h3>CPI per benchmark</h3>
+<div class="ctl"><label>Sort <select id="cpiSort"><option value="cpi">by CPI</option><option value="name">by name</option></select></label></div>
+<div class="card"><div class="bars" id="cpiBars"></div></div>
+
+<h3>Design-space sweeps</h3>
+<div class="tabs" id="sweepTabs"></div>
+<div class="card"><div class="bars" id="sweepBars"></div><p class="sub" id="sweepNote" style="font-size:.9rem;margin-bottom:0"></p></div>
+
+<h3>LSQ forwarding rate</h3>
+<div class="card"><div class="bars" id="lsqBars"></div></div>
+<p class="sub">Forwarding noticeably lowers CPI. Speculative load issue helps less, since loads that jump the line are more likely to miss. D-cache hit rate is the dominant CPI factor, and forwarding hides some misses.</p>
+
+<h2>5. Engineering notes</h2>
+<div class="scroll"><table>
+<tr><th>Topic</th><th>What we did</th></tr>
+<tr><td>Timing</td><td>Refactored the CDB-to-RS wakeup, LSQ-to-D-cache, and ROB dispatch paths. Critical path went from 11 ns to 8.3 ns.</td></tr>
+<tr><td>Modularity</td><td>ROB, LSQ, and D-cache are built from per-entry or per-thread state machines. This made bugs local and critical paths easy to find.</td></tr>
+<tr><td>Typed packets</td><td>Packed structs carry data between stages (instruction, ROB, map-table, RS, and FU packets), so interface changes are one edit.</td></tr>
+<tr><td>D-cache threads</td><td>Concurrency is a parameter. Three threads gave the best CPI. The arbiter favors one thread and the LSQ often has only one outstanding load, so extra threads sit idle.</td></tr>
+<tr><td>Verification</td><td>Module testbenches, benchmark sweeps, post-synthesis timing analysis, and a Python GUI that steps through packets cycle by cycle.</td></tr>
+</table></div>
+<div class="figs"><figure><img src="assets/visual_debugger.png" alt="GUI packet debugger screenshot" loading="lazy"><figcaption>Cycle-by-cycle packet debugger with RS state window.</figcaption></figure></div>
+
+<h2>6. Future work</h2>
+<p>Deeper and more adaptive branch predictors, early branch recovery, better cache replacement, and tighter LSQ and D-cache coordination for more memory-level parallelism.</p>
+
+<p class="note">This demo describes the design and results without publishing course implementation source. Confirm with EECS 470 staff and teammates before making any code, screenshots, or detailed assignment materials public.</p>
+</main>
+
+<script>
+const BLOCKS=[
+{id:'pc',n:'PC / Fetch',x:20,y:25,w:90,h:50,c:'fe',t:'Fetch stage',l:['Drives the PC into the I-cache and gathers up to three instructions per cycle (PC, PC+4, PC+8) from two aligned 64-bit lines.','Consults all predictors in parallel and pushes packets into the instruction fetch buffer.','Stalls on cache misses until both lines arrive and the buffer has room.','On a redirect from commit, the PC is overwritten with the branch target and speculative instructions are replaced.']},
+{id:'ic',n:'I-Cache',x:150,y:25,w:100,h:50,c:'fe',t:'Instruction cache + prefetcher',l:['Direct-mapped, 32 lines of 8 B, split into even/odd banks so PC and PC+8 arrive together.','Predecode bits (return, conditional branch) are stored beside the data.','4-entry victim cache with 2-bit LRU absorbs conflict misses.','Four outstanding transactions: two demand, two sequential prefetch streams (PC+16, PC+24).']},
+{id:'ifb',n:'IFB (32)',x:290,y:25,w:100,h:50,c:'fe',t:'Instruction fetch buffer',l:['32-entry FIFO decoupling fetch from decode. Fetch writes up to three entries per cycle and decode reads up to three.','Each entry holds the instruction, PC, decoded metadata and call/return hints.','A "spots" signal back to fetch prevents overflow.']},
+{id:'bp',n:'Predictor + BTB + RAS',x:430,y:25,w:150,h:55,c:'fe',t:'Branch prediction',l:['Hybrid of 64-entry bimodal and 64-entry GShare (6-bit history), arbitrated by a chooser. Hit rate 87.2% versus 84.3% bimodal-only.','64-entry direct-mapped BTB redirects fetch on predicted-taken branches.','16-entry return-address stack mirrors the 3-wide window. Recovery copies the committed stack over the speculative one.']},
+{id:'mt',n:'Map Table',x:430,y:120,w:150,h:60,c:'be',t:'Map table and rename',l:['Tracks whether each architectural register is renamed, which ROB tag will produce it, and whether that value was broadcast.','Each cycle: apply CDB, then retirements, then allocations. The youngest lane wins on same-cycle writes.','Younger lanes see tags from older siblings in the same cycle. x0 is never renamed.']},
+{id:'rob',n:'ROB',x:290,y:120,w:100,h:60,c:'be',t:'Reorder buffer',l:['Per-entry state machines driven by CDB and control inputs, with the dispatch logic separated from the entries.','Branch misprediction is detected inside each entry, which made debugging and critical-path work simple.','Retires in order and sends redirects and map-table updates. Size 32 is the sweet spot (WCPI 2.129).']},
+{id:'rs',n:'Reservation Station',x:290,y:215,w:100,h:55,c:'be',t:'Reservation station',l:['Holds renamed instructions until operands are ready: busy, opclass, ROB tag, two source operands with tag/ready/value.','CDB wakeup each cycle, and CDB snooping at dispatch to avoid an extra wake cycle.','Per-class selectors, then a global 3-wide arbiter across FU lanes. Issue registers shorten the wakeup-to-execute path.','Early-tag broadcast is wired but disabled.']},
+{id:'fu',n:'ALU / MUL / BR',x:150,y:215,w:100,h:55,c:'fu',t:'Functional units',l:['ALU lanes are combinational behind one-entry result buffers. The valid bit doubles as busy and CDB request.','Pipelined multiplier (mult_stage chain) accepts one multiply per cycle and freezes on CDB stall.','Branch lane: condition checker plus target adder, buffering taken bit, target and fall-through PC.','Extra branch or multiplier units gave no measurable gain (WCPI 2.131 vs 2.129, 2.128 vs 2.129).']},
+{id:'cdb',n:'CDB',x:20,y:215,w:100,h:55,c:'fu',t:'Common data bus',l:['Broadcasts up to CDB_SZ results per cycle to map table, ROB, RS and register file.','Request vectors are rotated by a round-robin pointer before the parallel selector, then un-rotated for fairness.','fu_stall tells losing FUs to hold their buffered result.']},
+{id:'lsq',n:'LSQ',x:290,y:310,w:100,h:40,c:'mem',t:'Load/store queue',l:['Each load and store entry is a state machine: IDLE, WAIT_ADDR, WAIT_DATA, PENDING, COMMIT.','Store addresses are sent to the load queue at issue, so age checks are distributed across load entries using ROB index order.','Forwards from older stores when all bytes are covered; otherwise speculatively issues past unresolved store addresses.','Over 800 lines but stays readable thanks to the per-entry structure.']},
+{id:'dc',n:'D-Cache',x:290,y:385,w:100,h:40,c:'mem',t:'Non-blocking data cache',l:['Write-back, direct-mapped, fully non-blocking, with a victim cache.','Instead of an MSHR file it uses N_THREAD parallel state-machine "threads", each handling one request. An arbiter spreads requests over free threads.','N_THREAD = 3 gave the best CPI. Hit rate drops as threads rise because out-of-order accesses hurt locality.']}
+];
+const g=document.getElementById('blocks'),det=document.getElementById('detail'),NS='http://www.w3.org/2000/svg';
+const col={fe:'var(--fe)',be:'var(--be)',fu:'var(--fu)',mem:'var(--mem)'};
+function show(b){document.querySelectorAll('.blk').forEach(e=>e.classList.toggle('sel',e.dataset.id===b.id));
+ det.innerHTML='<h3></h3><ul></ul>';det.querySelector('h3').textContent=b.t;
+ b.l.forEach(s=>{const li=document.createElement('li');li.textContent=s;det.querySelector('ul').appendChild(li)})}
+BLOCKS.forEach(b=>{const r=document.createElementNS(NS,'rect');
+ Object.entries({x:b.x,y:b.y,width:b.w,height:b.h,rx:8,class:'blk','data-id':b.id,tabindex:0,role:'button','aria-label':b.n}).forEach(([k,v])=>r.setAttribute(k,v));
+ r.style.fill=col[b.c];r.addEventListener('click',()=>show(b));r.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();show(b)}});g.appendChild(r);
+ const t=document.createElementNS(NS,'text');t.setAttribute('x',b.x+b.w/2);t.setAttribute('y',b.y+b.h/2+4);t.setAttribute('text-anchor','middle');t.textContent=b.n;g.appendChild(t)});
+show(BLOCKS[0]);
+
+function bars(el,rows,{max,fmt=v=>v.toFixed(3),cls=''}={}){
+ const m=max||Math.max(...rows.map(r=>Math.abs(r[1])));el.textContent='';
+ rows.forEach(([n,v,c])=>{const d=document.createElement('div');d.className='bar '+(c||cls)+(v<0?' neg':'');
+ d.innerHTML='<span></span><div><i></i></div><em></em>';d.children[0].textContent=n;d.children[0].title=n;
+ d.querySelector('i').style.width=Math.max(0.5,Math.abs(v)/m*100)+'%';d.children[2].textContent=fmt(v);el.appendChild(d)})}
+
+const CPI={alexnet:3.186,backtrack:3.260,basic_malloc:4.752,bfs:3.230,dft:2.635,fc_forward:3.098,graph:3.791,insertionsort:1.168,matrix_mult_rec:6.359,mergesort:2.929,omegalul:4.838,outer_product:1.249,priority_queue:4.649,quicksort:2.133,saxpy:2.337,sort_search:1.446};
+function drawCpi(){const k=document.getElementById('cpiSort').value;
+ const rows=Object.entries(CPI);rows.sort(k==='cpi'?(a,b)=>b[1]-a[1]:(a,b)=>a[0].localeCompare(b[0]));
+ bars(document.getElementById('cpiBars'),rows,{max:6.5})}
+document.getElementById('cpiSort').onchange=drawCpi;drawCpi();
+
+bars(document.getElementById('pfBars'),Object.entries({alexnet:1.525,priority_queue:1.551,basic_malloc:1.499,omegalul:1.459,fc_forward:1.239,graph:1.148,mergesort:1.016,dft:0.960,bfs:0.862,backtrack:0.674,quicksort:0.386,saxpy:0.134,matrix_mult_rec:0.128,outer_product:0.056,insertionsort:0.004,sort_search:-0.050}),{max:1.6,cls:'alt'});
+
+bars(document.getElementById('lsqBars'),Object.entries({insertionsort:0.625,sort_search:0.429,quicksort:0.410,dft:0.295,graph:0.213,outer_product:0.161,matrix_mult_rec:0.119,alexnet:0.080,fib_rec:0.079}),{max:0.7,fmt:v=>(v*100).toFixed(1)+'%',cls:'alt'});
+
+bars(document.getElementById('bpReal'),[['Bimodal only',84.3],['GShare only',85.4],['Hybrid + chooser',87.2,'alt']],{max:100,fmt:v=>v.toFixed(1)+'%'});
+
+const SW={
+ 'ROB size':{rows:[['16 entries',2.280],['32 entries',2.129,'alt'],['48 entries',2.121],['64 entries',2.121]],min:2,max:2.3,note:'Weighted CPI. A larger window exposes more ILP up to 32 entries, then RS, LSQ and the predictor become the bottleneck.'},
+ 'RS entries':{rows:[['8 entries',2.123],['20 entries',2.136]],min:2,max:2.3,note:'Weighted CPI. Differences across 8 to 20 entries are within benchmarking noise.'},
+ 'GShare history':{rows:[['4 bits',85.8],['8 bits',88.3]],min:80,max:90,fmt:v=>v.toFixed(1)+'%',note:'Weighted hit rate. Longer history helps regular control flow, with diminishing returns as aliasing grows.'},
+ 'Branch units':{rows:[['1 unit',2.131],['2 units',2.129]],min:2,max:2.3,note:'Weighted CPI. The 0.002 difference is insignificant, so branch throughput is not a bottleneck.'},
+ 'Multipliers':{rows:[['1 unit',2.128],['2 units',2.129]],min:2,max:2.3,note:'Weighted CPI. The pipelined multiplier already sustains throughput with a single unit.'}
+};
+const tabs=document.getElementById('sweepTabs');
+function drawSweep(k){tabs.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.textContent===k));
+ const s=SW[k];const rows=s.rows.map(([n,v,c])=>[n,v-s.min,c]);
+ bars(document.getElementById('sweepBars'),rows,{max:s.max-s.min});
+ document.querySelectorAll('#sweepBars .bar').forEach((d,i)=>d.children[2].textContent=(s.fmt||(v=>v.toFixed(3)))(s.rows[i][1]));
+ document.getElementById('sweepNote').textContent=s.note+' (Bars start at '+s.min+'.)'}
+Object.keys(SW).forEach(k=>{const b=document.createElement('button');b.className='tab';b.textContent=k;b.onclick=()=>drawSweep(k);tabs.appendChild(b)});
+drawSweep('ROB size');
+
+// Predictor playground
+function rng(seed){let s=seed>>>0;return()=>((s=(s*1664525+1013904223)>>>0)/4294967296)}
+function stream(kind){const r=rng(12345),out=[];
+ const loop=(pc,n)=>{for(let i=0;i<n;i++)out.push([pc,i%8!==7])};
+ for(let i=0;i<4000;i++){
+  if(kind==='loop')out.push([0x100,i%5!==4]);
+  else if(kind==='alt')out.push([0x100,i%3!==2]);
+  else if(kind==='bias')out.push([0x100+4*(i%5),r()<0.95]);
+  else if(kind==='rand')out.push([0x100+4*(i%5),r()<0.5]);
+  else if(kind==='corr'){const a=r()<0.5;out.push([0x100,a]);out.push([0x104,a])}
+  else{const k=i%4;
+   if(k===0)out.push([0x100,(i>>2)%8!==7]);
+   else if(k===1)out.push([0x110,r()<0.93]);
+   else if(k===2){const a=r()<0.5;out.push([0x120,a]);out.push([0x124,a])}
+   else out.push([0x130,((i>>2)&1)===0])}}
+ return out}
+function sim(kind,hb){const N=64,bi=new Uint8Array(N).fill(1),gs=new Uint8Array(N).fill(1),ch=new Uint8Array(N).fill(1);
+ let h=0,hit={bi:0,gs:0,hy:0},n=0;const mask=(1<<hb)-1;
+ for(const [pc,t] of stream(kind)){const bi_i=(pc>>2)&63,gi=((pc>>2)^(h&mask))&63;
+  const pb=bi[bi_i]>=2,pg=gs[gi]>=2,ph=ch[bi_i]>=2?pg:pb;
+  hit.bi+=pb===t;hit.gs+=pg===t;hit.hy+=ph===t;n++;
+  if(pb!==pg){ch[bi_i]=Math.max(0,Math.min(3,ch[bi_i]+(pg===t?1:-1)))}
+  const up=(a,i)=>{a[i]=Math.max(0,Math.min(3,a[i]+(t?1:-1)))};up(bi,bi_i);up(gs,gi);
+  h=((h<<1)|(t?1:0))&255}
+ return [hit.bi/n*100,hit.gs/n*100,hit.hy/n*100]}
+const NOTES={loop:'A short loop: bimodal always misses the exit, while GShare history learns when it comes.',alt:'A repeating pattern: a bimodal counter just follows the majority, and history predicts every outcome.',bias:'Strongly biased branches favor bimodal, and GShare spreads them over more entries.',corr:'The second branch copies the first, so only history-based prediction can get it.',mix:'A mix of behaviors, the case where the chooser pays off by picking the better predictor per branch.',rand:'Nothing predicts a coin flip. All three hover near 50%.'};
+function drawBp(){const k=document.getElementById('bpWl').value,h=+document.getElementById('bpH').value;
+ const [a,b,c]=sim(k,h);
+ bars(document.getElementById('bpBars'),[['Bimodal',a],['GShare',b],['Hybrid',c,'alt']],{max:100,fmt:v=>v.toFixed(1)+'%'});
+ document.getElementById('bpNote').textContent=NOTES[k]}
+document.getElementById('bpWl').onchange=drawBp;document.getElementById('bpH').onchange=drawBp;drawBp();
+</script>
+</body>
+</html>
