@@ -20,14 +20,6 @@ A three-wide, P6-style out-of-order RISC-V core featuring register renaming, res
 
 Lingxiao Yang · Rui Jiang · Runshuang Guo · Juntao Wu
 
-| Block | Owner(s) |
-|---|---|
-| ROB, instruction fetch unit, LSQ, final data cache | Juntao Wu |
-| Map table, instruction cache, branch predictor, configuration tuning | Lingxiao Yang |
-| Reservation station, initial data cache, cache debugging | Runshuang Guo |
-| Functional units, CDB, backend integration and verification | Rui Jiang |
-
-CPI and timing optimization were shared across the team.
 
 ## Microarchitecture
 
@@ -120,4 +112,4 @@ README.md       this overview
 
 SystemVerilog · RTL design · RISC-V · register renaming · speculative execution · branch prediction · reservation stations · reorder buffer · load/store queue · non-blocking cache · prefetching · CPI analysis · synthesis timing · verification
 
-> This repository describes the design and results without publishing course implementation source. Confirm with EECS 470 staff and teammates before making any code, screenshots, or detailed assignment materials public.
+> In keeping with the EECS 470 course policy, this repository presents the design and results without publishing implementation source. The [final report](EECS470_Final_Report.pdf) documents the full design.
